@@ -1,0 +1,1866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0b1018" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>GlideHive — Pixel Thumb Sandbox</title>
+<style>
+  :root {
+    --bg: #0b1018;
+    --surface: #131b26;
+    --surface2: #1c2736;
+    --border: rgba(148, 163, 184, 0.16);
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+    --accent-soft: rgba(56, 189, 248, 0.18);
+    --heart: #f59e0b;
+    --heart-soft: rgba(245, 158, 11, 0.16);
+    --delete: #f43f5e;
+    --delete-bg: rgba(244, 63, 94, 0.22);
+    --green: #34d399;
+    --purple: #c084fc;
+    --bottom-lift: 14px;
+    --kbd-width: 88%;
+    --hex-height-scale: 1.04;
+  }
+
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100dvh;
+    overflow: hidden;
+    overscroll-behavior: none;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    max-width: 520px;
+    margin: 0 auto;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--bottom-lift));
+    position: relative;
+  }
+
+  /* Header Bar */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px 6px;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.2px;
+  }
+  .brand-hex {
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #38bdf8, #818cf8);
+    clip-path: polygon(50% 0%, 95% 25%, 95% 75%, 50% 100%, 5% 75%, 5% 25%);
+    font-size: 11px;
+    color: #0b1018;
+    font-weight: 900;
+  }
+  .top-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .pill-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: background 0.12s, border-color 0.12s;
+  }
+  .pill-btn.active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: #e0f2fe;
+  }
+  .pill-btn:active {
+    transform: scale(0.96);
+  }
+
+  /* Practice prompt bar */
+  .prompt-bar {
+    margin: 0 12px 6px;
+    padding: 7px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .prompt-bar.hidden { display: none; }
+  .prompt-text {
+    font-size: 13px;
+    color: #cbd5e1;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .prompt-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--accent);
+    font-weight: 700;
+    display: block;
+    margin-bottom: 1px;
+  }
+
+  /* Text Composer Area (Custom, prevents Gboard popup) */
+  .editor-wrap {
+    flex: 1;
+    min-height: 76px;
+    margin: 0 12px 6px;
+    background: #0f1621;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 12px 14px 28px;
+    position: relative;
+    overflow-y: auto;
+    touch-action: pan-y;
+    display: flex;
+    flex-direction: column;
+  }
+  .editor-content {
+    font-size: 20px;
+    line-height: 1.45;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+    min-height: 44px;
+  }
+  .editor-placeholder {
+    color: #475569;
+    font-size: 16px;
+  }
+  .cursor-caret {
+    display: inline-block;
+    width: 2.5px;
+    height: 1.15em;
+    background: var(--accent);
+    vertical-align: -0.18em;
+    margin: 0 0.5px;
+    border-radius: 2px;
+    animation: blink 1s step-end infinite;
+  }
+  @keyframes blink {
+    0%, 55% { opacity: 1; }
+    56%, 100% { opacity: 0.15; }
+  }
+  .editor-footer {
+    position: sticky;
+    bottom: -28px;
+    margin-top: auto;
+    padding-top: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--muted);
+    pointer-events: none;
+  }
+  .stat-badge {
+    background: rgba(52, 211, 153, 0.14);
+    color: var(--green);
+    border: 1px solid rgba(52, 211, 153, 0.25);
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-weight: 600;
+    font-size: 11px;
+  }
+  .gesture-toast {
+    background: rgba(56, 189, 248, 0.16);
+    color: #bae6fd;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .gesture-toast.show { opacity: 1; }
+
+  /* Tuning Overlay Drawer */
+  .tune-drawer {
+    position: absolute;
+    top: 48px;
+    left: 12px;
+    right: 12px;
+    z-index: 60;
+    background: #141d2b;
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    border-radius: 16px;
+    padding: 12px 14px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.65);
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 55dvh;
+    overflow-y: auto;
+    touch-action: pan-y;
+  }
+  .tune-drawer.open { display: flex; }
+  .tune-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 12.5px;
+  }
+  .tune-row label {
+    color: #cbd5e1;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .tune-row input[type="range"] {
+    flex: 1;
+    accent-color: var(--accent);
+    height: 22px;
+  }
+  .tune-val {
+    width: 44px;
+    text-align: right;
+    color: var(--accent);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .seg-group {
+    display: flex;
+    background: #0b1018;
+    border-radius: 10px;
+    padding: 2px;
+    border: 1px solid var(--border);
+  }
+  .seg-btn {
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .seg-btn.active {
+    background: var(--accent);
+    color: #0b1018;
+  }
+  .tune-footer {
+    display: flex;
+    gap: 8px;
+    padding-top: 4px;
+    border-top: 1px solid var(--border);
+  }
+  .tune-footer button {
+    flex: 1;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font-weight: 600;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .tune-footer button.primary {
+    background: var(--accent);
+    color: #0b1018;
+    border-color: var(--accent);
+  }
+
+  /* Prediction / Suggestion Bar */
+  .suggest-bar {
+    height: 40px;
+    flex-shrink: 0;
+    margin: 0 8px 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 4px;
+    touch-action: none;
+  }
+  .suggest-chip {
+    flex: 1;
+    height: 34px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0 8px;
+    transition: background 0.1s;
+  }
+  .suggest-chip.top {
+    background: var(--accent-soft);
+    border-color: rgba(56, 189, 248, 0.45);
+    color: #e0f2fe;
+  }
+  .suggest-chip:active {
+    transform: scale(0.96);
+    background: rgba(56, 189, 248, 0.3);
+  }
+  .suggest-chip.empty {
+    opacity: 0.35;
+    font-weight: 500;
+    font-size: 12px;
+    color: var(--muted);
+    pointer-events: none;
+  }
+
+  /* Keyboard Shell (Handles Right/Left/Full Docking) */
+  .kbd-shell {
+    flex-shrink: 0;
+    width: 100%;
+    padding: 2px 6px 4px;
+    display: flex;
+    align-items: stretch;
+    gap: 5px;
+    touch-action: none;
+    position: relative;
+  }
+  .kbd-shell.hand-right { flex-direction: row; }
+  .kbd-shell.hand-left { flex-direction: row-reverse; }
+  .kbd-shell.hand-full .side-gutter { display: none; }
+
+  /* Side Utility Gutter */
+  .side-gutter {
+    width: calc(100% - var(--kbd-width));
+    min-width: 44px;
+    max-width: 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    justify-content: space-between;
+    padding-bottom: 2px;
+  }
+  .gutter-btn {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    touch-action: none;
+  }
+  .gutter-btn span {
+    font-size: 9px;
+    color: var(--muted);
+    font-weight: 600;
+    letter-spacing: 0.2px;
+  }
+  .gutter-btn.active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .gutter-btn:active {
+    background: var(--surface2);
+    transform: scale(0.95);
+  }
+
+  /* Main Keyboard Column */
+  .kbd-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    position: relative;
+    touch-action: none;
+  }
+
+  /* Hex Canvas Container */
+  .hex-stage {
+    position: relative;
+    width: 100%;
+    touch-action: none;
+  }
+  #hexSvg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+    overflow: visible;
+  }
+  #trailCanvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  /* Floating Thumb Preview Bubble */
+  .key-popup {
+    position: absolute;
+    z-index: 30;
+    pointer-events: none;
+    transform: translate(-50%, -100%);
+    min-width: 54px;
+    height: 54px;
+    padding: 0 12px;
+    border-radius: 16px;
+    background: #1e293b;
+    border: 2px solid var(--accent);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.65);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    color: #fff;
+    font-size: 26px;
+    font-weight: 800;
+  }
+  .key-popup.show { display: flex; }
+  .key-popup.alt {
+    border-color: var(--heart);
+    color: #fde68a;
+  }
+  .key-popup small {
+    font-size: 9px;
+    color: var(--muted);
+    font-weight: 600;
+    margin-top: -2px;
+  }
+
+  /* Unified Single-Screen 123# View */
+  .sym-stage {
+    display: none;
+    width: 100%;
+    flex-direction: column;
+    gap: 5px;
+    touch-action: none;
+  }
+  .sym-stage.active { display: flex; }
+  .sym-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .sym-grid {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+  }
+  .kbd-shell.hand-left .sym-grid {
+    flex-direction: row-reverse;
+  }
+  .sym-groups {
+    flex: 1.35;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .sym-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+  }
+  .sym-key {
+    height: 44px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 16px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    touch-action: none;
+  }
+  .sym-key:active { transform: scale(0.93); background: var(--surface2); }
+  .sym-key.grp-punct { border-color: rgba(56, 189, 248, 0.35); color: #bae6fd; }
+  .sym-key.grp-brack { border-color: rgba(192, 132, 252, 0.38); color: #e9d5ff; }
+  .sym-key.grp-math  { border-color: rgba(52, 211, 153, 0.35); color: #a7f3d0; }
+  .sym-key.grp-web   { border-color: rgba(245, 158, 11, 0.35); color: #fde68a; }
+
+  .numpad-zone {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    background: rgba(56, 189, 248, 0.06);
+    border: 1px solid rgba(56, 189, 248, 0.22);
+    border-radius: 12px;
+    padding: 4px;
+  }
+  .num-key {
+    height: 42px;
+    border-radius: 9px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    background: #172233;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    touch-action: none;
+  }
+  .num-key.zero { background: #1e2d42; border-color: rgba(56, 189, 248, 0.4); }
+  .num-key:active { transform: scale(0.93); background: var(--accent); color: #0b1018; }
+
+  /* Bottom Action Dock (Mirrors in Left-Handed Mode) */
+  .action-dock {
+    display: flex;
+    gap: 5px;
+    height: 50px;
+    touch-action: none;
+  }
+  .kbd-shell.hand-left .action-dock {
+    flex-direction: row-reverse;
+  }
+  .dock-btn {
+    border-radius: 13px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-weight: 700;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    cursor: pointer;
+    touch-action: none;
+    position: relative;
+    transition: background 0.1s, transform 0.08s;
+  }
+  .dock-btn:active { transform: scale(0.96); }
+
+  .btn-mode { width: 56px; font-size: 13px; color: #bae6fd; background: #152233; }
+  .btn-shift-full { width: 44px; font-size: 17px; display: none; }
+  .kbd-shell.hand-full .btn-shift-full { display: flex; }
+  .btn-shift-full.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+  .btn-space {
+    flex: 1;
+    background: #151f2e;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.4px;
+  }
+  .btn-space.sliding {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: #e0f2fe;
+  }
+  .btn-delete {
+    width: 68px;
+    background: var(--delete-bg);
+    border-color: rgba(244, 63, 94, 0.55);
+    color: #ffe4e6;
+    font-size: 20px;
+  }
+  .btn-delete .del-hints {
+    font-size: 8.5px;
+    color: #fda4af;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    margin-top: -2px;
+  }
+  .btn-delete.swiping-left {
+    background: rgba(244, 63, 94, 0.5);
+    transform: translateX(-4px);
+  }
+  .btn-delete.swiping-right {
+    background: rgba(245, 158, 11, 0.42);
+    border-color: var(--heart);
+    transform: translateX(4px);
+  }
+  .btn-enter {
+    width: 52px;
+    background: linear-gradient(135deg, #0284c7, #2563eb);
+    border-color: rgba(56, 189, 248, 0.5);
+    color: #fff;
+    font-size: 19px;
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <!-- Top Bar -->
+  <div class="topbar">
+    <div class="brand">
+      <span class="brand-hex">E</span>
+      <span>GlideHive</span>
+    </div>
+    <div class="top-actions">
+      <button class="pill-btn active" id="btnPrompts">Prompts</button>
+      <button class="pill-btn" id="btnClear">Clear</button>
+      <button class="pill-btn" id="btnTune">⚙️ Tune</button>
+    </div>
+  </div>
+
+  <!-- Collapsible Practice Prompt Bar -->
+  <div class="prompt-bar" id="promptBar">
+    <div style="min-width:0; flex:1;">
+      <span class="prompt-label">Try gliding this</span>
+      <div class="prompt-text" id="promptText">thanks mate see you tomorrow</div>
+    </div>
+    <button class="pill-btn" id="btnNextPrompt">Next ▸</button>
+  </div>
+
+  <!-- Live Ergonomic Calibration Drawer -->
+  <div class="tune-drawer" id="tuneDrawer">
+    <div class="tune-row">
+      <label>Thumb Mode</label>
+      <div class="seg-group" id="handSeg">
+        <button class="seg-btn" data-hand="left">Left</button>
+        <button class="seg-btn active" data-hand="right">Right</button>
+        <button class="seg-btn" data-hand="full">Full</button>
+      </div>
+    </div>
+    <div class="tune-row">
+      <label>Hex Height</label>
+      <input type="range" id="rngHeight" min="85" max="130" value="104" />
+      <span class="tune-val" id="valHeight">104%</span>
+    </div>
+    <div class="tune-row">
+      <label>One-Hand Width</label>
+      <input type="range" id="rngWidth" min="76" max="95" value="88" />
+      <span class="tune-val" id="valWidth">88%</span>
+    </div>
+    <div class="tune-row">
+      <label>Bottom Lift</label>
+      <input type="range" id="rngLift" min="0" max="48" value="14" />
+      <span class="tune-val" id="valLift">14px</span>
+    </div>
+    <div class="tune-row">
+      <label>Hold-for-Symbol</label>
+      <input type="range" id="rngHold" min="150" max="380" step="10" value="230" />
+      <span class="tune-val" id="valHold">230ms</span>
+    </div>
+    <div class="tune-row">
+      <label>Heart Glow / Haptics</label>
+      <div style="display:flex; gap:6px;">
+        <button class="pill-btn active" id="btnHeartGlow">Heart: ON</button>
+        <button class="pill-btn active" id="btnHaptics">Vibe: ON</button>
+      </div>
+    </div>
+    <div class="tune-footer">
+      <button id="btnResetTune">Reset Defaults</button>
+      <button class="primary" id="btnCopyTune">Copy My Pixel Notes</button>
+      <button id="btnCloseTune">Done</button>
+    </div>
+  </div>
+
+  <!-- Custom Text Composer (tap to move cursor, never triggers system Gboard) -->
+  <div class="editor-wrap" id="editorWrap">
+    <div class="editor-content" id="editorContent"></div>
+    <div class="editor-footer">
+      <span class="stat-badge" id="statBadge">Glide a word across the hexes</span>
+      <span class="gesture-toast" id="gestureToast"></span>
+    </div>
+  </div>
+
+  <!-- Top-4 Glide Prediction Bar -->
+  <div class="suggest-bar" id="suggestBar">
+    <div class="suggest-chip empty">Glide or tap letters below…</div>
+  </div>
+
+  <!-- Keyboard Shell -->
+  <div class="kbd-shell hand-right" id="kbdShell">
+    <!-- Left/Right Utility Gutter -->
+    <div class="side-gutter" id="sideGutter">
+      <button class="gutter-btn" id="btnFlipHand" title="Switch Left/Right Thumb">
+        ⇄<span>Hand</span>
+      </button>
+      <button class="gutter-btn" id="btnShiftGutter" title="Shift / Auto-Cap">
+        ⇧<span>Caps</span>
+      </button>
+      <button class="gutter-btn" id="btnUndo" title="Undo">
+        ↶<span>Undo</span>
+      </button>
+      <button class="gutter-btn" id="btnCopyText" title="Copy Text">
+        📋<span>Copy</span>
+      </button>
+    </div>
+
+    <!-- Main Keyboard Column -->
+    <div class="kbd-main">
+      <!-- Hexagonal Glide Stage -->
+      <div class="hex-stage" id="hexStage">
+        <svg id="hexSvg" preserveAspectRatio="none"></svg>
+        <canvas id="trailCanvas"></canvas>
+        <div class="key-popup" id="keyPopup"></div>
+      </div>
+
+      <!-- Unified Single-Screen 123# Numbers & All Symbols -->
+      <div class="sym-stage" id="symStage">
+        <div class="sym-header">
+          <span>All numbers &amp; symbols — 1 screen</span>
+          <button class="pill-btn active" id="btnAutoReturn" style="padding:2px 8px; font-size:11px;">Snap to ABC: ON</button>
+        </div>
+        <div class="sym-grid">
+          <div class="sym-groups" id="symGroups"></div>
+          <div class="numpad-zone" id="numpadZone"></div>
+        </div>
+      </div>
+
+      <!-- Mirrored Bottom Action Dock -->
+      <div class="action-dock" id="actionDock">
+        <button class="dock-btn btn-mode" id="btnMode">123#</button>
+        <button class="dock-btn btn-shift-full" id="btnShiftFull">⇧</button>
+        <div class="dock-btn btn-space" id="btnSpace">
+          <span id="spaceLabel">Space  ◄ slide cursor ►</span>
+        </div>
+        <div class="dock-btn btn-delete" id="btnDelete">
+          <span>⌫</span>
+          <span class="del-hints">←word · ⌦→</span>
+        </div>
+        <button class="dock-btn btn-enter" id="btnEnter">↵</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // =========================================================================
+  // 1. LAYOUT DEFINITION (GlideHive 26-Hex Frequency Honeycomb)
+  // =========================================================================
+  const HEX_ROWS = [
+    { off: 0.5, keys: [
+      { k:'w', alt:'1', tier:3 }, { k:'c', alt:'2', tier:2 }, { k:'h', alt:'3', tier:1 },
+      { k:'r', alt:'4', tier:1 }, { k:'o', alt:'5', tier:2 }, { k:'f', alt:'6', tier:2 }
+    ]},
+    { off: 0.0, keys: [
+      { k:'v', alt:'7', tier:3 }, { k:'l', alt:'8', tier:2 }, { k:'t', alt:'9', tier:1 },
+      { k:'e', alt:'0', tier:0 }, { k:'a', alt:'@', tier:1 }, { k:'u', alt:'#', tier:2 }, { k:'p', alt:'$', tier:3 }
+    ]},
+    { off: 0.5, keys: [
+      { k:'y', alt:'%', tier:3 }, { k:'s', alt:'&', tier:2 }, { k:'i', alt:'-', tier:1 },
+      { k:'n', alt:'+', tier:1 }, { k:'d', alt:'(', tier:2 }, { k:'m', alt:')', tier:3 }
+    ]},
+    { off: 0.0, keys: [
+      { k:'q', alt:'!', tier:3 }, { k:'k', alt:'?', tier:3 }, { k:'b', alt:',', tier:3 },
+      { k:'g', alt:'.', tier:2 }, { k:'x', alt:"'", tier:3 }, { k:'j', alt:'/', tier:3 }, { k:'z', alt:':', tier:3 }
+    ]}
+  ];
+
+  // Standard QWERTY unit coordinates for real thumb-distance comparison
+  const QWERTY_POS = {};
+  ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'].forEach((row, r) => {
+    const off = r === 1 ? 0.35 : r === 2 ? 0.85 : 0;
+    for (let c = 0; c < row.length; c++) QWERTY_POS[row[c]] = [c + off, r * 1.05];
+  });
+
+  // Contraction smart map
+  const CONTRACTIONS = {
+    dont:"don't", cant:"can't", wont:"won't", im:"I'm", ive:"I've", ill:"I'll",
+    youre:"you're", thats:"that's", whats:"what's", didnt:"didn't", doesnt:"doesn't",
+    isnt:"isn't", havent:"haven't", lets:"let's", heres:"here's", theres:"there's",
+    wasnt:"wasn't", wouldnt:"wouldn't", couldnt:"couldn't", shouldnt:"shouldn't"
+  };
+
+  // Frequency-ranked 5,000-word English glide dictionary
+  const DICT_RAW = "the of and to in that he was it his is with as had for at by on not be you from but this or her him have which were all she they are there we will your said an one who so what about can just me my would their when its know think been may could im if no up them dont get going how like more now out should time want into good great here need our really see thanks us yes prince any back make some thats then very well where did only also because come got hello home other over please right take than today too work love man has after before call cant down even hey hi ill ive many most much ok okay sorry still thank two why yeah do again always around best better didnt done email feel give never night off phone sure tomorrow try whats year youre such already cool doesnt easy keyboard left lets meeting morning nice soon week wont actually car check coming family fast getting isnt maybe message perfect quick ready send start theres three working these new those amazing awesome couldnt free glide havent heres hour hours late making mate office pixel pretty probably sent show sounds stop test text thumb tonight trying wait wasnt weekend works wouldnt old first himself men face upon app build cheers coffee design dinner evening feels layout lunch minute minutes month order running shouldnt taking team typing watch french same without went made little afternoon bye computer cost definitely dog driving five four fresh gemini google heading honestly kids movie music news photo price screen super ten testing update video walk weather worries yep long states came under room must eyes princess being go thought android australia basically beach bike breakfast brown built calling chat client confirm delivery eight flight friday glidehive holiday hotel laptop melbourne messages nine nope online photos rain ride saturday seven shop shopping six smart sunday swipe sydney tea touch yours people war life way another away general hand day through began apps australian booked brilliant brisbane camera centre colour emails fantastic favourite fox literally monday movies quote remote sorted sunny swim tablet texting thursday truck tuesday website wednesday wifi own asked while army looked say count am whole shall head part bluetooth booking heaps hive invoice jumps lazy metre offline organise realise thumbs travelling tv government felt seemed something having place state house against between every though nothing emperor heard young bone disease arvo gboard kilometre tyre saw don skin tissue took years once look last united round found blood power met might father both usually small side form let during quite turned brekkie door countess knew suddenly tell told looking whom yet moment large end chapter treatment officer voice words few hands cases days among everything called dear congress seen often gave battle history case taken put law position however smile sometimes country understand each known soldiers oh others become far brought along especially sat behind women course result patient stood joint anything cause evidently several president less passed wife infection matter given god feeling world certain chief front does action whether white question movement condition son herself mind possible alone body horse later toward death followed present labor necessary money almost open set until woman nerve ran act expression things fig replied use troops half south business officers became within mother commander themselves wound pain thing number leave above added party word parts table lay find either near tissues constitution enemy continued fact high letter project public red common held talk example west illustration important national cried friend carried entered nor received second land surface light cannot next used glands different ever fire itself union twenty early saying sitting full arm bones horses name political road since together thousand cold heart forms speak shouted means ask kept impossible arms due vessels line moved becomes rose wish conditions system drawing gone rise force third king everyone short times black formed pressure hair clear fellow laws longer children remained help regiment forward hundred results air military myself north peace rode wounded answered beyond crowd growth tried lost anyone orders past point service across ah interest understood bed reached strange close process rather read sound beside frequently happy opinion self spoke standing limb opened presence trade till deep formation soldier affairs operation wanted field raised thus slavery repeated stopped rest wished following happened perhaps turning colonies seeing applied answer true muscles affected events neck occur period talking kind revolution able else won foot cut appeared rapidly associated husband led lower southern abscess terrible least lymph returned spread company local middle attention features noticed reason campaign return wall merely tumours silent steps turn whose effect water giving laid therefore window wounds federal person soft speaking subject size believe daughter doctor hear honor strength waiting colonial immediately placed quickly conversation dark questions city hard street feet measures view doing removed usual account brother civil fell foreign former lady paper sir child forces glanced nearly republican enough fine character closed particularly town afraid considerable court hardly severe single coat freedom sides tears joints knee symptoms cancer ground human meet nature seat acute boy covered nation remarked society although artery changes neither rights soul strong spirit swelling fear girl grew reply thin tone bring pale according considered dead except mouth area faces yourself remember smiling clinical someone village lesions plan special contrary smiled ulcer attack members bridge employed finally friends listened bad various membrane pass drew growing occurs takes doubt muscle primary command convention described independence appear change glad causes decided hope john nerves powers relations showed voices wrote difficult ordered secondary terms drawn fixed direction fingers killed liable lips opening says unable complete frightened governor leg natural run struck capital holding sister smoke staff study beginning blue carriage colonel cry greater happiness loss moving keep declared direct firm idea master method remain serious consists group heavy increased indeed pleasure relation sarcoma simple step camp dress further influence marked prepared age instead lead property thinking vessel diseases duty industry leaders matters silence appearance chair expressed living manner march uncle changed chiefly passing prevent seems veins besides lines popular slowly story term angry attended leaving lord produced activity dry low observed victory cells clearly east effort injury months upper dressing established historians latter poor sight similar corner live loved pay series silver broken captain destroyed divided everybody peasants expected future book gold organisms shoulders thoughts ball danger fall straight tariff explain kissed resulting thirty uniform control finger portion pressed prisoners asking chronic majority occurred purpose rule arrived clock economic filled health produce remembered certainly commerce election hot individual persons presented ulcers distance exclaimed interests legs lying quiet administration church earth follow generals handsome houses importance post region section spite weeks western written affair glass occupied policy politics seem shoulder vein bacteria below increase laughing leading meaning movements note ought suffrage truth bright diagnosis drove easily hold papers reading rushed seized senate slight territory whatever aid development division lived meant shown sleep treaty advanced farmers guns miss river suffering destruction event royal spent varieties difficulty evident eye miles none outside passage railways regarded save settled vote bank citizens main normal shouting solution ago aim appears equal experience injuries letters plain removal stage circumstances enter hill interrupted involved married surprise care floor forty healing infected paid value aside hat talked wide cartilage directly showing support surrounded carry connection efforts ends farther fibrous figure ladies nations nose object progress sense temperature wrong caused dressed experienced knows lesion majesty ordinary real instant issue larger laughed mass move authority connective discharge external flank fluid galloped gentlemen grown learned listen path population surrounding walked begun bill extent gentleman happen parties sign absence avoid beautiful bent consider fate glancing industrial mean notice ranks signs begin cap characteristic democracy knowing sake source whispered active break cavity chance cross desire escape fight finished imagine marriage northern opposition pleasant rapid reaction readily representatives started tenderness threw advance bound broke closely completely higher marry multiple play pleased practice receive shot superficial treated cannon degree fifty gazed police retreat unless adjacent century circulation democrats despite guards hearing hills inflammation measure original private soil success thousands amount bodies broad constitutional dangerous elbow essential internal methods particular proposed required rich slaves spoken thrown allow appointed boots calm comes composed continually generally glance official personal sad simply sort caught entirely firing loose pointed porch acts amendment believed directed eh fat gradually gray huge joy lie listening occasionally places possibility scar significance sit sought stand estate gives indicated looks malignant pointing provided servants tender wood accepted affections asleep carrying contact engaged express maid offered rays regard report shock situation type unknown wearing allowed articles bear breast die drive excited foundation kindly lies lodge necessity nonsense per rarely rooms rupture snow write accompanied apart including justice plans reach tendency weak amid duties forget infantry millions nearer painful peculiar rising slightly sofa supply tax twice agitation burning carts died hall heat points rare recognized sharp variety angrily bald becoming big convinced effects forth principles prove sea sovereign speech sun towards adopted approached chest companion conception democratic favor goods grand highest introduced press pushed secret social sore visit bleeding concerned cotton dying exposed handed inhabitants interference limited opposite promised proved serfs surprised cavalry evidence familiar laughter legislature mere needed pacific paused pray quietly sudden suite theory yard arrested battery circle consciousness definite feelings flushed fourth involuntarily iron liberty likely major marrow operations origin ourselves peasant problems repair slave throughout touched towns understanding valley actions agree application arteries beneath burned cent cities deeply demand equally fields formerly immense ones raising remarkable respect splendid thick tuberculosis wealth address anti attempt central council forced forest founded joined lands problem prominent regular seldom spot stream struggle teeth arranged box conflict crossed extended fever food ha island liked mainly obtained paralysis pity risk separated sufficient telling warm yellow addressing bare domestic dull extraordinary genius grow hurriedly lit material minister muscular muttered secure shed stay supreme surfaces tall visitor affection amputation burst chosen class companies constant enormous firmly independent information moreover powerful putting railway remains sac sensation ship streets trunk useful worn abandoned addition addressed afterwards attitude blow canal carefully clay devil empire enterprise examination extreme facts fallen greatest guests innocent lifted million proportion quarters refused settlement silently stone tendons walls absolutely agreed alive arthritis assume blame bowed club compromise cure current frontier girls interesting knowledge onto otherwise riding rubles shaft skull walking agreement august beauty cellular center charge clot edges gauze heaven lad laugh masses nurse shook sole spring square weight worth assumed characters copyright deal derived elements enlarged fully heads increasing journey organized separate share sheath suggested visitors writing yesterday apparently approaching arrival commercial conscious containing darkness distinguished dreadful entering garden legislatures obvious policies returning sky trust wrist announced confused cyst defense details didn fighting follows freely gazing groups impression limbs occurrence previous promise rate referred satisfaction subjects throat wars youth animated attacks branches cysts demanded driven expecting final forehead immigration intention marshal mentioned opportunity pressing relief sacrifice squadron surgical tongue wishing worse accustomed admit attacked bell debt diffuse doctrine gate green historical interested numbers parliament scarcely slow space stern widely actual ashamed commanders determined existence faith false forgive forgotten fracture happens horror industries irritation loud notes permanent reasons serve ships supper views william advantage advice anxious bit ceased colonists conduct degeneration entire failed fatal gun length managed moist presents protection recognised seriously served suffered taxes wolf armies charming cloak clothes column commission created debts distribution domain excellent excitement feared forming heavily join mine mixed practical shape sprang spreading stepped stout absorbed acid admission admitted breaking clean contraction credit crime crown curiosity decision empty expect feature fifteen fond grant inevitable language legislation narrow piece planting prolonged summer wine arrest commonly comparatively confined departure edge everywhere explained fifth finding gesture goes healthy hurrah injection inner lives motion nail played prisoner satisfied science sheaths sorrow supplies torn triumph visible votes wet anger books dropped entrance estates famous gathered insisted mistaken naturally page patients physical planters playing reform search situated striking suppose acting approval brain burns conclusion confusion deeper disappeared ears electronic explanation extension forever gentle greatly hurried hut intended issued leadership organs raw reaching reception rules shadow swollen uttered vice watched wore accept acquired animal colony concluded destroy education function ideas immediate kill noticing offer pulled resolution sighed smooth somewhere stupid sympathy terror train trouble trusts unexpectedly absent absolute access acquaintance artillery avoided based beg candidate cart clever develop friendly grain guard handkerchief hastily helped interior keeping lip merry moments partly performed pipe portions principle republic resources sinus successful vary virtue agriculture appeal article aspect badly bought busy captured crowded defined delegates draw drink evil fair game grafting habit hero household injured knees leaning memory possession previously replaced ring solemn suffer varies abroad armed authorities bacterial band banks capable cast causing choose contest countries crossing delicate diplomatic eat enlargement exercise falling highly imperial makes merchants mon nervous opposed pure receiving recent recognize religious reports sections standard attached awaiting base building cleared confidence considering deformity excuse executive faced federalists gown humanity inflamed intimate leader league level operative progressive protective remove scattered serum sick spreads sum unions unpleasant welfare agitated alarm aroused assistance aunt aware bonds branch cheerful coachman connected consent depends dignity extremity fit fool fought gland hollow holy informed legal market occupation permission peter platform provisions raise recalled reported resembling revolutionary secretary shouts station stretched tend transferred ways weary winter alliance committed describe desired developed distant extensive extremely frequent inevitability inherited layer lose mood moral necrosis occasion overlying pistol pocket recovery remark saved seated separation sixth smaller sugar toes toxins trees urged waited whisper ancient assistant attain balls brothers buy contents continue contrast corps currency declaration eager eastern elastic fancy farm fault figures imagination instance irregular jumped member midst mild nearest numerous preparing print purchase purposes realized shaking shaped shirt shows silk smell starting traumatic trunks wages windows agents armchair assembled baker ballot bandage columns compared double epidermis examined exposure fashion finish flew frowning glory grave growths highness interfere joyful junction modern profound pulse scene selected septic singing sold stronger substance task trembling vicinity violence wind aide arose blushed bringing compelled constantly conviction date difficulties dispute engagement flow footman forearm hundreds imagined inflammatory list maintain management noble northwest orderly patches proper province rates revealed ruin ruined secured sinuses tends throw tobacco useless using vast weakness abdominal approved beaten begins bitter border cards cheeks confederation continuous delay donations doors drop exactly extend fellows gap grief happening hip historic illness income kiss markets owing provide rapidity repeating resistance review safe wheels worthy anxiety attempts autumn beat benefit bore bottle bullet choice comrades continental copy cord defeat difference dollars duke ear embraced fortunes granted headquarters hospital induced inquired instantly instructions international loudly mention nodded polish prepare provision quarter remarks servant somewhat stamp stranger tertiary throwing unlike abscesses advancing association baby battalion bedroom catch corn couple dancing despair disappear discovered doctors dream energy establish exhausted families federation gained hung hurry judge meanwhile monsieur mustache namely older peoples perfectly prices proclamation production rank related rough scale senator senators specially stages supposed thoroughly tube unexpected capture changing clouds conservative courts daily dense diminished ease elected exist favorite feeble forests friendship gain invited louis manifestations medium militia owners positive powder preparations prevented proud reference roads severity stories undergo valet vascular watching absorption ahead apply balance beard bow breathing bullets careful cheek china claim combination combined dare delight distinct fortune frowned hunter icon included increases inquiry inside invasion letting losing manufactures mounted needs parents ports program removing resolute retired sharply sons sores stomach structures surgeon surroundings territories thirds twelve voters altered angel apparent bearing bottom carriages cattle color communication dealing disturbance excessive favored gallop guilty hanging harm hay immigrants jersey knife literary loving mercy obtain organization pains prayer provinces race reconstruction refuse represented respectfully rid role saber satisfactory settle softly spirits statement sternly stretching surgery sword tetanus thrust top trap tree wishes wool affecting areas assured battles childhood civilization courage cruel depend devoted distributed existed facing factor fill grounds hopes intellectual knoll lightly match merchant mist naval non photograph pride producing protect reasoning record reduced responsibility retained rolled saddle sensibility shell shone sobs solid spectacles steadily strongly structure superior touching utter vital vitality warfare younger animals anywhere approach assembly basis borne burn cervical claims coast collected cousin covering dance directions elder enthusiasm equality establishment executed fail financial fled grass heal hide license liver maintained male needle newly pace packed pair pause peripheral persistent quantity ray reflected remaining request restored sergeant shining shut signed spinal tail tension tied tired vigorous whip worked accomplished advantages affect appointment artificial baggage belonged capacity career coal coats committee compression contempt determine doubts dust eagerly ended enemies failure fly grey habits haven historian intervals leaned machine manufacturing mills mistake mystery native nevertheless observation oil opinions organism payment picked plainly proposal pushing range ratification representative restrain revenue serene significant stayed steward strike supported thigh thrombosis title vague wants workers accounts alcohol angle arguments arterial bells bold born breath cease cloth concerning consisted constitutions correct cover darling delighted detail dirty dislocation dogs fires fur gaily goodness hoped innumerable issues joyfully kissing lads learn leaves liberal map mark mysterious named navy nodules noise obviously paces paying precious pulsation regeneration regions reign seek sending services setting shoes sigh song swept swiftly temper threatened treasury trial trivial villages wagons wedding wheat whenever win withdrawn acted alike answering archive available awaited axis battlefield bony collar continent culture damaged debate deed detachment disposition distinctly district elections employees focus folk frost gently headed lamp masters mental obligations observe offices onset personally phenomena protests realize recall reproach safety screamed seas senseless serving settlers spaces specific surrender suture universal unnatural wonder wooden abolition acres ankle applying assumes attracted awkward ballroom bird boldly candle circles college confess confirmed consideration contains devised discuss disorder disturbed dozen dressings emotion exceptional exchange execution eyebrows fired frame galloping gloomy grasp groin hare height hounds imposed interview jaw joke mad mankind mercury mud nobody offended ossification paced pathological preferred regiments research restoration seeking sentiment sing singular spoon steady stick supplied taxation timidly toe trace unfortunate unite worst yield apt arrangement canals chamber chemical closer closing commands corridor deprived destroying diplomacy dispositions emperors enjoyed examining excision extending farms flying gay homes hunting instrument leather lifting limit lot materials mechanical motionless ours outcome passion periods possessed preserve processes provincial reaches recognizing rejected religion rounded rush sank scars sensitive shade shrugged skeleton slept spine stained staying stir summoned sweet tormented total vanished wild adventure altogether arrange begged bending bills board bread burden chose churches comfort compressed corporation criticism crowds cutting cystic declaring delirium department designed detached disappearance dissatisfied distinguish divine dragged enacted existing flat fractures frequency gates glittering governments hurt include indication injected institutions intense jacket margins metal ministers mission natured packing palm paragraph partner phrase possibly prognosis rendered resolved reward salt sang scotch skill spiritual statesmen stiffness strain strict succeeded thickened topics unhappy uniforms varying yards affects alien anatomical cab capsule combinations controversy crisis dared decide diseased earlier elderly erysipelas eventually exception expense generation holder islands judges judgment lack learning lock lowered misfortune negotiations officials operating painted palace petition pioneers portrait poured preparation presidential providing pursued recognition redoubt references resist returns ridden roof school situations sleeping sooner stock stopping storm tide types valuable vous witness wrapped abandon appropriate argument attained attentively brows charter commanding concern confident demands denounced depressed deserted desperate dominion drunk exceedingly flexed goose hence improvement individuals inevitably inform interval keen leads lift lined louder marrying melancholy migration mile mingled nails obliged overcome owner passionate passive plump practically priest principal quarrel recovered renewed resemble reserve responsible restless ringing rubbed saving sclerosis securing seizing shame site sounded spend stationed sufficiently thereby thirteen tones track unusual virus warning wing accused aged animation appearances assumption authorized belief benefactor challenge charm complications conceal concentrated conference congenital contract controlled cries defeated descended dining discussed discussion driver duel essence expedition expressing federalist flag footsteps forgetting frank glasses governors hunt indicate indifferent inspector introduction lasted legislative memories moderate necessarily newspapers nobility pack permit posterior preventing recommended retain searching seize sixteen sources speed sphere stairs stars stroke submit suitable swaying temporary timid trademark treat typical undoubtedly university wealthy additional ambassador anatomy banking blisters blocked blushing card chain chin classes cloud condemned confederacy connections considerations criminal dam daughters denied dependent depth draft escaped escapes eve excluded filling flung grows haste hearts hers hostile hungry iliac insignificant intently iodine lateral likewise lise lovely maids mighty murder oak opponents peaceful pelvis privileges proof reality rear recently recover refund refusal regulation risen rosy seaboard sell simplicity sixty sleeves slipped slough status steam steel stores subjected swift tight uncertain unnecessary urine vain ventured violent volume waters wear westward wonderful accord advocates alarmed arrangements assurance attempted attend author awful brightly bushes calls cavities chairs clearing compare complicated concealed consequently consist content conventions corporal crushed curious damages damp defend degrees destined devotion drainage eldest electors employers enforce entrusted est exists factories failing fee fetch fortnight fourteen furnish ganglion gloves gracious groom hastened heels hidden ice icons indicating judicial kinds largely lofty manifest marching militiamen milk minor motor names obey offensive outer ownership passions perplexity profits pulling purple radical rang reasonable rebellion require retire rubber severely sheet simultaneously stated stepping toll transport travel ultimately uncommon unconsciously waved withdraw abnormal abundant accident advised agreeable allied aloud anterior antiseptic arise arrive astonishment birth bowing brave calmly candidates candles charged citizen coarse collective conquest consequence constitutes creature destructive discover distal doses drops exaggerated exchanged extends furnished gaze giant goal gross halted hid infinite killing loaded luck margin mason massage meetings midnight missed missing neighbor neighbors net picture pieces pillow placing products professional purse release render replying representation reputation rested restore restricted rows schools seconds servitude softened sovereignty stirred subsequent supremacy sustained sutures swayed visited whistle abandoning activities add amused aorta arbitration bands boundary clinically coldly collection commonest contemporaries convoy cook crying deformities delayed description disputes dresses effective element embedded encounter endure experiment extremities farmer faster fix flap flowed forgot fourteenth funds gravity greeted harness highroad horrible hunger improvements incident indefinite involuntary kings lake lane laying liability lieutenant locked lumen machinery manage medicine minds mountains negative perform pink plantations poisoning pretext printed probable questioning resulted runs shortly sleeve spare stable studies submitted sunk teach thickening tooth trembled upstairs wagon wake wept whistling writers adherent adults avenue battalions beast bench bond clothing coach comparison contain conveyed copies copper corporations corresponding cunning cup danced dealt decline depression dismounted displacement distribute downstairs dried easier energetic envelope eternal exact favour flesh furniture glances heroic homestead impaired indifference inn irony key kingdom knocked losses lover marshals mob nephew oath occupations outline overcoat pacing painfully patience pool pounds poverty prayed projects punish ratified reckoned recorded resembles resolutions resting revolt roll route row secession sees sentence shots slender solitary subsequently substances suspected thereof threatening throne turns upset wave zone abolished accumulation advertisement agent annexation answers aseptic attacking backward bar belonging brief cadet childish clerk commanded completed complex conducted conferred conscience consisting constitute construction convenient cruelty custom damage declare depended deposit desert differently discipline discovery distress dose drank duration endless ensues excess explaining fairly falls finance formidable fun funny gossip gouty hatred heroes hum ideal implicated independently inflicted injections instances intervention investigation joyous jury largest larynx lest measured messenger naive naked narrative occurring originate pen porter positions procedure propose prosperity protested punctured records regarding relative relieved remedy reminded repeat rheumatism roar rodent rubbing sale saline sallow scalp scheme scoundrel select shared signal slightest sobbing speaker successfully sufferings suit theater thinks trading troubles uncomfortable vividly weep willing wisdom zeal absurd accordingly adult aims amusing applicable artisans assure attributed awake barrier bees behalf bundles capillary childlike circular circumscribed collect colored comrade continues correspondence countrymen courier creating crop crops crush curly decisive definition detected dilated dim eating eighteen elapsed elbows elsewhere employment enable encouraged enjoy expansion factors factory fed fence feverish fleet folded golden gradual grateful greatness greeting guide hiding hoofs hoping hurrying impending impressed improved infants infections infiltration intestine lesser lining located majestic marched mechanics median merit mistress moon moves needles nowhere occasional occupy offering openly precisely profit proprietary qualities radiant regret reluctantly remarkably repeal repeatedly retreating rises root roused settlements sheep slip smilingly stake star stared strangely subtle suction suggest suggestion surely surrendered tear tent terminal ties tiptoe unconscious undertaking vigorously vodka weaker weapon widespread wise abuses admitting affectionate alleged anaesthesia appearing applications assemblies atmosphere attractive audible bay belong blind celebrated competition cords creditors dashed defect defects deliberately delightful delivered dimly drift drinking economy emancipation examples fatty favorable finds fitted flames fog fold followers framework frankly frown gigantic heights hitherto honest host hostility index induce influences introduce irrigation knights lime limits linen longed lungs madam muttering nationalism opium opponent orange originates partial pas passionately plenty preoccupied prescribed produces promptly pull pursuit questioned recollection recourse reflection reformers remembering representing respectful respiration restrictions rice routine rumors sharing shout sin solemnly sorts spasms spurs stain standards stolen stump sub taste tense traces trained transformed treason washed washing waste whence wherever wire wretched abdomen accompany acquainted adding adoption agricultural allies appreciated attendance audience avoiding bath bind bite blister blocking boot cellar checked circulating claimed coin comfortable commons critical crushing curtain daring dawn defended depths desires destiny diphtheria dragging duct efficient eighteenth embarrassed ensue erosion establishing examine extra file foreigners foreseen foundations functions generations gets gloom glow habitual harsh helpless hoarse honored horizon inoculation inserted instinct invisible involve irresistible jealous laborers lately layers ligament lights manhood manners medical merrily mines minimum monarch morrow muskets nights nineteenth nominated nursery parted passes patriotic perished permitted physically pictures pole posts prison profession promoted providence qualifications radial rage realm rectum respected respects rigid rolling sailors scarlet shawl shops sincere spongy swellings sympathetic tearing temple terribly tightly traffic treating trot verses volunteers voted waistcoat wax welcomed witnessed woods afforded amiable announcement anybody asks aspects ate bag bandaged beating blockade bluish bosom boys breach breeches brow bruised brushed buried campaigns carpet centers collateral coloured commissions committees community compact congestion congratulate constructed contracted cooperation crimes decree defective defending demonstrated differential dispatch displaced dissolution drastic drug drunken edition educated effected eighth eighty electric eleven enforcement enjoyment entry equipment etc exclusively expenses fears finishing fish fitting flourishing foe formal fortunate fragments fulfilled fundamental grace grants guessed handle happily harmful hated heel hit honorable impulse inclined inconvenience indolent influenced initiative inquiries inquiring institution instruments interstate involves isolated judging justify kidney lent lessons logical loves maneuvers manufacturers maximum memorable minded modified monarchy museum nasal neuritis newspaper niece observing pardon perish phalanx phase pose posted prefer presidency projecting pronounced properly protected punished punishment recalling reduce reduction relate replacement requirements response resumed sacred samovar scraped seats security shipping shy sinking skilled slope somebody splints straw strengthen sunshine supposing suspicion symptom tale taught temporarily tenure theories trains tranquil transmitted transportation treaties trousers twisted typhoid upwards utterly vehicles vested vexed viewed void warmly web wheel wrinkled yielding accidentally afford analysis annual anthrax anxiously approve atrophy bleed cares chase choosing complaint compound contained continuing continuity contradiction conversations counted courtiers crack dearest deprive determination disability disliked dismay distorted divisions document electoral elevated encourage epiphysis excised eyed fails faithful fearing feather firmness flowing foolish forbidden forbidding foul fruit fulfill gains gathering generous governed gratitude halt hate hesitation hostess impairment impressions improve incessantly intact intelligent intentions interfered invariably lively log loyal mentally mutual neighboring novel operate opposing orbit osseous overthrow owe pad panic parade permanently persist pick pilgrims plea pond pour profuse proves puckered purely queen readiness recurrent refrain reins relapse reliable relieve resolutely responded rivers ruler rushing secondly seventy sincerely sleepy slipping spoils stiff struggling stuck submission sums supervision tells thoughtful tiny traitor transfer traveling turkey vainly valves vertebrae wash wasted woke writes abolitionists advise afterward aimed allowing alteration amendments announce arbitrary architect arranging astonished attract avail awoke beaming behave beloved beneficial birch briskly brotherhood buildings bureau calculated caps civilian clergy clue commencement compensation complains comply consistence consult converted courtyard customary dependence device diminish dined display displeased distinction distributing dollar doubtful downward embarrassment eruption execute exertion faint fifteenth fluctuation folly fort friction fury gather gentry halfway harder idle illustrated incomplete indicates initial inquire inspired insult interfering intrigues invading irritated joining joking justified keeper kitchen labors lacerated landing limitation lotion lowering manager manual manufacture marks miners muddy musket neglected neuralgia objections parent patriotism pigmented plaster plate pockets poetic poison polite port possess preceded promote promotion prospect protest push quality quicker referring regardless regulations relating rent replace ribbon ridicule rulers sadly savage scandal scared scissors segment senior seventh shadows shaven shelter similarly sob solely solved spontaneous stands staphylococcus stirring strengthened strikes succession suffers sweat tables tariffs tenth thanked threshold toxic traditions tranquillity traveler treasure twentieth underlying unity vertebral victories virulence waking weeping whispering winning accent accompanying acquire administered adopt advantageous agencies aggravated annoyance arriving assigned attempting authors average await bachelor bass baths bears begging bend betrothed biceps binding brush cabinet campfire catching caution chances charges clung colonization companions consequences considerably consolation coroner crowding deadly dignified disappears discharged dispatched dispersed disposed dissatisfaction dissolved diverse documentary drafted drain dreamed dropping eaten electricity emerged enchanting ending error evils ex excise exciting exhibit exit expectation externally farming fastened fathers female fixing flower forwards fright geese glimpse graft granting heavier helping hole honors horn hospitals imperfectly importation incisions incubation inferior insane inspection intellect invade invaded invested invitation inviting involving jaws jay jealousy knock les loses meadow meaningless micro mill mining mirror misery mode moonlight municipal murmured nowadays objects obtaining ointment opportunities oppressed pages passages pathetic patriot penetrating philosophy pin plantation planter policeman preceding pretended proceed proceedings product prohibition proprietor published pupil purity quivering recur reflections refusing regretted remedies replies restraint retreated revision roofs ruptured rye secrecy senile smiles societies solitude solve sovereigns spoiled stalls staring startled sternum straining strategic style supplemented survive talent teaching temples territorial tore traders trench truly undergoes uneasily upward utmost uttering vanity velvet vicious victim vomiting warned waving welcome wiped withdrawal abruptly accidental accurately adjoining adventures advocated aided aides allegiance alter alterations ancients arts attentive backwards barn batteries beginnings behaved bet blessing boil boiling boils borders breaks bridges calamity calcification calf cancerous ceremony collapse collecting commit complained compliance contemptuous contemptuously county";
+  const DICT_WORDS = DICT_RAW.split(' ');
+
+  const PRACTICE_PROMPTS = [
+    "thanks mate see you tomorrow",
+    "the quick brown fox jumps over the lazy dog",
+    "can we meet at the office today",
+    "this feels really fast on my pixel",
+    "let me know when you are ready",
+    "i think there is a better way to type",
+    "heading home now will call you soon",
+    "sounds great cheers for the update",
+    "left thumb and right thumb both feel easy",
+    "hello world glide typing on hexagons"
+  ];
+
+  // =========================================================================
+  // 2. STATE & PERSISTENT TUNING
+  // =========================================================================
+  const DEFAULT_CFG = {
+    hand: 'right',        // 'right' | 'left' | 'full'
+    heightScale: 104,     // %
+    oneHandWidth: 88,     // %
+    bottomLift: 14,       // px
+    holdMs: 230,          // ms
+    heartGlow: true,
+    haptics: true,
+    autoReturnSym: true,
+    showPrompts: true
+  };
+
+  let cfg = { ...DEFAULT_CFG };
+  try {
+    const saved = JSON.parse(localStorage.getItem('glidehive_cfg_v1') || 'null');
+    if (saved) cfg = { ...DEFAULT_CFG, ...saved };
+  } catch (_) {}
+
+  const state = {
+    text: '',
+    cursor: 0,
+    undoStack: [],
+    shiftMode: 'auto',    // 'off' | 'once' | 'auto'
+    view: 'hex',          // 'hex' | 'sym'
+    lastCommittedWord: null, // { start, end, raw }
+    lastPredictions: [],
+    promptIdx: 0,
+    totalWordsGlided: 0,
+    totalGlideDist: 0,
+    totalQwertyDist: 0
+  };
+
+  // Unit geometry (independent of pixel scaling) for fast shape templates
+  const UNIT_POS = {};
+  const KEYS_FLAT = [];
+  HEX_ROWS.forEach((row, r) => {
+    row.keys.forEach((item, c) => {
+      const ux = c + row.off;
+      const uy = r * 0.866;
+      UNIT_POS[item.k] = [ux, uy];
+      KEYS_FLAT.push({ ...item, r, c, ux, uy, px: 0, py: 0 });
+    });
+  });
+
+  // =========================================================================
+  // 3. GEOMETRIC GLIDE DECODER (16-Point Resampled Polyline Matcher)
+  // =========================================================================
+  const N_PTS = 16;
+
+  function resampleFlat(pts, n) {
+    const len = pts.length;
+    if (len === 0) return [];
+    if (len === 1) {
+      const out = new Float32Array(n * 2);
+      for (let i = 0; i < n; i++) { out[i*2] = pts[0][0]; out[i*2+1] = pts[0][1]; }
+      return out;
+    }
+    const dists = new Float32Array(len);
+    for (let i = 1; i < len; i++) {
+      dists[i] = dists[i-1] + Math.hypot(pts[i][0] - pts[i-1][0], pts[i][1] - pts[i-1][1]);
+    }
+    const total = dists[len - 1];
+    const out = new Float32Array(n * 2);
+    if (total < 1e-5) {
+      for (let i = 0; i < n; i++) { out[i*2] = pts[0][0]; out[i*2+1] = pts[0][1]; }
+      return out;
+    }
+    let j = 0;
+    for (let k = 0; k < n; k++) {
+      const target = (total * k) / (n - 1);
+      while (j < len - 2 && dists[j+1] < target) j++;
+      const seg = dists[j+1] - dists[j];
+      const t = seg > 1e-5 ? (target - dists[j]) / seg : 0;
+      out[k*2]   = pts[j][0] + t * (pts[j+1][0] - pts[j][0]);
+      out[k*2+1] = pts[j][1] + t * (pts[j+1][1] - pts[j][1]);
+    }
+    return out;
+  }
+
+  function wordPathDist(word, map) {
+    let d = 0;
+    for (let i = 1; i < word.length; i++) {
+      const a = map[word[i-1]], b = map[word[i]];
+      if (a && b) d += Math.hypot(b[0]-a[0], b[1]-a[1]);
+    }
+    return d;
+  }
+
+  // Pre-build 5,000 word geometric templates once (<35ms on Pixel)
+  const TEMPLATES = DICT_WORDS.map((w, rank) => {
+    const raw = [];
+    for (let i = 0; i < w.length; i++) {
+      const p = UNIT_POS[w[i]];
+      if (!p) continue;
+      if (raw.length === 0 || raw[raw.length - 1][0] !== p[0] || raw[raw.length - 1][1] !== p[1]) {
+        raw.push(p);
+      }
+    }
+    const res = resampleFlat(raw, N_PTS);
+    let wLen = 0;
+    for (let i = 1; i < raw.length; i++) {
+      wLen += Math.hypot(raw[i][0] - raw[i-1][0], raw[i][1] - raw[i-1][1]);
+    }
+    return {
+      w,
+      rank,
+      sx: raw[0][0], sy: raw[0][1],
+      ex: raw[raw.length-1][0], ey: raw[raw.length-1][1],
+      raw,
+      res,
+      wLen,
+      freqPen: 0.032 * Math.log(rank + 1)
+    };
+  });
+
+  function decodeGlide(unitPts) {
+    const uRes = resampleFlat(unitPts, N_PTS);
+    const uStart = unitPts[0];
+    const uEnd = unitPts[unitPts.length - 1];
+    let uLen = 0;
+    for (let i = 1; i < unitPts.length; i++) {
+      uLen += Math.hypot(unitPts[i][0] - unitPts[i-1][0], unitPts[i][1] - unitPts[i-1][1]);
+    }
+
+    const best = [];
+    const maxEndDist = 1.55;
+
+    for (let idx = 0; idx < TEMPLATES.length; idx++) {
+      const tpl = TEMPLATES[idx];
+      const ds = Math.hypot(uStart[0] - tpl.sx, uStart[1] - tpl.sy);
+      if (ds > maxEndDist) continue;
+      const de = Math.hypot(uEnd[0] - tpl.ex, uEnd[1] - tpl.ey);
+      if (de > maxEndDist) continue;
+
+      let pErr = 0;
+      const wRes = tpl.res;
+      for (let i = 0; i < N_PTS; i++) {
+        pErr += Math.hypot(uRes[i*2] - wRes[i*2], uRes[i*2+1] - wRes[i*2+1]);
+      }
+      pErr /= N_PTS;
+
+      // Coverage check: did the user path pass near every letter of the candidate?
+      let covErr = 0;
+      const raw = tpl.raw;
+      for (let r = 0; r < raw.length; r++) {
+        const rx = raw[r][0], ry = raw[r][1];
+        let minD = 99;
+        for (let i = 0; i < N_PTS; i++) {
+          const d = Math.hypot(uRes[i*2] - rx, uRes[i*2+1] - ry);
+          if (d < minD) minD = d;
+        }
+        covErr += minD;
+      }
+      covErr /= raw.length;
+
+      const lErr = Math.abs(uLen - tpl.wLen) / Math.max(uLen, tpl.wLen, 1.0);
+      const score = 0.55 * pErr + 0.35 * (ds + de) * 0.5 + 0.30 * covErr + 0.25 * lErr + tpl.freqPen;
+
+      if (best.length < 4 || score < best[best.length - 1].score) {
+        best.push({ w: tpl.w, score });
+        best.sort((a, b) => a.score - b.score);
+        if (best.length > 4) best.pop();
+      }
+    }
+    return best.map(b => b.w);
+  }
+
+  function prefixSuggestions(prefix) {
+    if (!prefix) return [];
+    const low = prefix.toLowerCase();
+    const out = [];
+    for (let i = 0; i < DICT_WORDS.length && out.length < 4; i++) {
+      if (DICT_WORDS[i].startsWith(low)) out.push(DICT_WORDS[i]);
+    }
+    return out;
+  }
+
+  // =========================================================================
+  // 4. DOM REFERENCES & HELPERS
+  // =========================================================================
+  const $ = id => document.getElementById(id);
+  const kbdShell = $('kbdShell');
+  const hexStage = $('hexStage');
+  const hexSvg = $('hexSvg');
+  const trailCanvas = $('trailCanvas');
+  const trailCtx = trailCanvas.getContext('2d');
+  const keyPopup = $('keyPopup');
+  const symStage = $('symStage');
+  const editorContent = $('editorContent');
+  const editorWrap = $('editorWrap');
+  const suggestBar = $('suggestBar');
+  const statBadge = $('statBadge');
+  const gestureToast = $('gestureToast');
+
+  function buzz(ms) {
+    if (cfg.haptics && navigator.vibrate) {
+      try { navigator.vibrate(ms); } catch (_) {}
+    }
+  }
+
+  let toastTimer = null;
+  function showToast(msg) {
+    gestureToast.textContent = msg;
+    gestureToast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => gestureToast.classList.remove('show'), 1400);
+  }
+
+  function saveCfg() {
+    try { localStorage.setItem('glidehive_cfg_v1', JSON.stringify(cfg)); } catch (_) {}
+  }
+
+  function pushUndo() {
+    state.undoStack.push({ text: state.text, cursor: state.cursor });
+    if (state.undoStack.length > 40) state.undoStack.shift();
+  }
+
+  function shouldAutoCap() {
+    if (state.shiftMode === 'once') return true;
+    if (state.shiftMode === 'off') return false;
+    const before = state.text.slice(0, state.cursor);
+    if (before.trim().length === 0) return true;
+    return /[.!?]\s*$/.test(before) || /\n$/.test(before);
+  }
+
+  function formatWord(rawWord) {
+    let w = CONTRACTIONS[rawWord] || rawWord;
+    if (w === 'i') w = 'I';
+    if (shouldAutoCap()) {
+      w = w.charAt(0).toUpperCase() + w.slice(1);
+    }
+    return w;
+  }
+
+  function syncShiftButtons() {
+    const active = shouldAutoCap();
+    $('btnShiftGutter').classList.toggle('active', active);
+    $('btnShiftFull').classList.toggle('active', active);
+    // Update hex letter case visually
+    hexSvg.querySelectorAll('text.hex-main').forEach(el => {
+      const k = el.dataset.key;
+      el.textContent = active ? k.toUpperCase() : k.toLowerCase();
+    });
+  }
+
+  // =========================================================================
+  // 5. TEXT RENDERING & CURSOR PLACEMENT
+  // =========================================================================
+  function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function renderEditor() {
+    if (state.text.length === 0) {
+      editorContent.innerHTML = `<span class="cursor-caret"></span><span class="editor-placeholder">Glide across hexes or tap letters…</span>`;
+    } else {
+      const before = escapeHtml(state.text.slice(0, state.cursor));
+      const after = escapeHtml(state.text.slice(state.cursor));
+      editorContent.innerHTML = `${before}<span class="cursor-caret"></span>${after}`;
+    }
+    editorWrap.scrollTop = editorWrap.scrollHeight;
+    syncShiftButtons();
+  }
+
+  // Tap inside text composer to move cursor to end (or start if empty)
+  editorWrap.addEventListener('click', () => {
+    state.cursor = state.text.length;
+    state.lastCommittedWord = null;
+    renderEditor();
+  });
+
+  function insertText(str, isWord = false, rawWord = null) {
+    pushUndo();
+    let before = state.text.slice(0, state.cursor);
+    const after = state.text.slice(state.cursor);
+
+    let prefixSpace = '';
+    if (isWord && before.length > 0 && !/[\s(\[{'"\/-]$/.test(before)) {
+      prefixSpace = ' ';
+    }
+    const inserted = prefixSpace + str + (isWord ? ' ' : '');
+    state.text = before + inserted + after;
+    const wordStart = before.length + prefixSpace.length;
+    const wordEnd = wordStart + str.length;
+    state.cursor = before.length + inserted.length;
+
+    if (isWord) {
+      state.lastCommittedWord = { start: wordStart, end: wordEnd, raw: rawWord };
+      if (state.shiftMode === 'once') state.shiftMode = 'auto';
+    } else {
+      state.lastCommittedWord = null;
+      if (state.shiftMode === 'once' && /[a-zA-Z]/.test(str)) state.shiftMode = 'auto';
+    }
+    renderEditor();
+  }
+
+  function replaceLastWord(newRaw) {
+    if (!state.lastCommittedWord) return;
+    pushUndo();
+    const { start, end } = state.lastCommittedWord;
+    const wasCap = /^[A-Z]/.test(state.text.slice(start, end));
+    let formatted = CONTRACTIONS[newRaw] || newRaw;
+    if (wasCap) formatted = formatted.charAt(0).toUpperCase() + formatted.slice(1);
+    state.text = state.text.slice(0, start) + formatted + state.text.slice(end);
+    state.cursor = start + formatted.length + (state.text[start + formatted.length] === ' ' ? 1 : 0);
+    state.lastCommittedWord = { start, end: start + formatted.length, raw: newRaw };
+    buzz(8);
+    renderEditor();
+  }
+
+  function getCurrentTapPrefix() {
+    const before = state.text.slice(0, state.cursor);
+    const m = before.match(/([a-zA-Z]+)$/);
+    return m ? { word: m[1], start: before.length - m[1].length } : null;
+  }
+
+  function completeTapPrefix(rawWord) {
+    const pref = getCurrentTapPrefix();
+    if (!pref) { insertText(formatWord(rawWord), true, rawWord); return; }
+    pushUndo();
+    const wasCap = /^[A-Z]/.test(pref.word);
+    let formatted = CONTRACTIONS[rawWord] || rawWord;
+    if (wasCap) formatted = formatted.charAt(0).toUpperCase() + formatted.slice(1);
+    state.text = state.text.slice(0, pref.start) + formatted + ' ' + state.text.slice(state.cursor);
+    state.cursor = pref.start + formatted.length + 1;
+    state.lastCommittedWord = { start: pref.start, end: pref.start + formatted.length, raw: rawWord };
+    buzz(8);
+    renderEditor();
+    renderSuggestions([]);
+  }
+
+  function renderSuggestions(words, mode = 'glide') {
+    state.lastPredictions = words;
+    if (!words || words.length === 0) {
+      suggestBar.innerHTML = `<div class="suggest-chip empty">Glide or tap letters below…</div>`;
+      return;
+    }
+    suggestBar.innerHTML = words.map((w, i) => {
+      const disp = CONTRACTIONS[w] || w;
+      return `<button class="suggest-chip ${i === 0 ? 'top' : ''}" data-word="${w}" data-mode="${mode}">${disp}</button>`;
+    }).join('');
+    suggestBar.querySelectorAll('.suggest-chip').forEach(btn => {
+      btn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        const w = btn.dataset.word;
+        if (btn.dataset.mode === 'glide' && state.lastCommittedWord) {
+          replaceLastWord(w);
+          showToast(`Swapped → ${CONTRACTIONS[w] || w}`);
+        } else {
+          completeTapPrefix(w);
+        }
+      });
+    });
+  }
+
+  function updateDistanceStats(word) {
+    const gDist = wordPathDist(word, UNIT_POS);
+    const qDist = wordPathDist(word, QWERTY_POS);
+    if (qDist <= 0.01) return;
+    state.totalWordsGlided++;
+    state.totalGlideDist += gDist;
+    state.totalQwertyDist += qDist;
+    const savedThis = Math.round((1 - gDist / qDist) * 100);
+    const savedAvg = Math.round((1 - state.totalGlideDist / state.totalQwertyDist) * 100);
+    const label = savedThis >= 0
+      ? `"${word}" · ${savedThis}% shorter (avg ${savedAvg}% vs QWERTY)`
+      : `"${word}" · avg ${savedAvg}% shorter vs QWERTY`;
+    statBadge.textContent = label;
+  }
+
+  // =========================================================================
+  // 6. HEXAGONAL SVG RENDERER & GEOMETRY CALIBRATION
+  // =========================================================================
+  let hexW = 50, hexH = 56, padX = 2, padY = 4;
+
+  function hexPoints(cx, cy, rx, ry) {
+    const pts = [];
+    for (let i = 0; i < 6; i++) {
+      const angle = (Math.PI / 180) * (60 * i - 90);
+      pts.push(`${(cx + rx * Math.cos(angle)).toFixed(1)},${(cy + ry * Math.sin(angle)).toFixed(1)}`);
+    }
+    return pts.join(' ');
+  }
+
+  function layoutHexes() {
+    const stageW = hexStage.clientWidth;
+    if (!stageW) return;
+    const hScale = cfg.heightScale / 100;
+    hexW = (stageW - padX * 2) / 7;
+    hexH = hexW * 1.1547 * hScale;
+    const rowDy = hexH * 0.75;
+    const totalH = hexH + 3 * rowDy + padY * 2;
+
+    hexStage.style.height = `${Math.round(totalH)}px`;
+    hexSvg.setAttribute('viewBox', `0 0 ${stageW} ${totalH}`);
+
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    trailCanvas.width = Math.round(stageW * dpr);
+    trailCanvas.height = Math.round(totalH * dpr);
+    trailCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const rx = (hexW / 2) * 0.96;
+    const ry = (hexH / 2) * 0.96;
+    const isCap = shouldAutoCap();
+
+    let svgHtml = '';
+    KEYS_FLAT.forEach(item => {
+      const cx = padX + (item.c + item.ux - item.c + 0.5) * hexW;
+      const cy = padY + hexH / 2 + item.r * rowDy;
+      item.px = cx;
+      item.py = cy;
+
+      let fill = '#16202e';
+      let stroke = 'rgba(148, 163, 184, 0.20)';
+      let strokeW = 1.2;
+      if (cfg.heartGlow) {
+        if (item.tier === 0) {
+          fill = '#2a2216';
+          stroke = 'rgba(245, 158, 11, 0.78)';
+          strokeW = 1.8;
+        } else if (item.tier === 1) {
+          fill = '#182638';
+          stroke = 'rgba(56, 189, 248, 0.45)';
+          strokeW = 1.4;
+        } else if (item.tier === 2) {
+          fill = '#141e2c';
+          stroke = 'rgba(148, 163, 184, 0.24)';
+        } else {
+          fill = '#101824';
+          stroke = 'rgba(148, 163, 184, 0.14)';
+        }
+      }
+
+      const altColor = /[0-9]/.test(item.alt) ? '#38bdf8' : '#f59e0b';
+      const label = isCap ? item.k.toUpperCase() : item.k;
+      svgHtml += `
+        <g class="hex-cell" data-key="${item.k}">
+          <polygon points="${hexPoints(cx, cy, rx, ry)}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeW}" />
+          <text x="${(cx + rx * 0.34).toFixed(1)}" y="${(cy - ry * 0.32).toFixed(1)}"
+                text-anchor="middle" fill="${altColor}" font-size="${Math.max(9.5, hexW * 0.21).toFixed(1)}"
+                font-weight="700" opacity="0.88">${escapeHtml(item.alt)}</text>
+          <text class="hex-main" data-key="${item.k}" x="${cx.toFixed(1)}" y="${(cy + hexH * 0.14).toFixed(1)}"
+                text-anchor="middle" fill="${item.tier === 0 && cfg.heartGlow ? '#fde68a' : '#f8fafc'}"
+                font-size="${Math.max(17, hexW * 0.40).toFixed(1)}" font-weight="800">${label}</text>
+        </g>`;
+    });
+    hexSvg.innerHTML = svgHtml;
+  }
+
+  function nearestHex(px, py) {
+    let best = KEYS_FLAT[0], bestD = Infinity;
+    for (let i = 0; i < KEYS_FLAT.length; i++) {
+      const it = KEYS_FLAT[i];
+      const d = (it.px - px) ** 2 + (it.py - py) ** 2;
+      if (d < bestD) { bestD = d; best = it; }
+    }
+    return best;
+  }
+
+  function pixelToUnit(px, py) {
+    const rowDy = hexH * 0.75;
+    const ux = (px - padX) / hexW - 0.5;
+    const uy = ((py - padY - hexH / 2) / rowDy) * 0.866;
+    return [ux, uy];
+  }
+
+  function highlightHex(keyChar) {
+    hexSvg.querySelectorAll('.hex-cell polygon').forEach(p => {
+      p.style.filter = '';
+      p.style.fillOpacity = '';
+    });
+    if (!keyChar) return;
+    const cell = hexSvg.querySelector(`.hex-cell[data-key="${keyChar}"] polygon`);
+    if (cell) {
+      cell.style.filter = 'brightness(1.55)';
+    }
+  }
+
+  // =========================================================================
+  // 7. POINTER & GLIDE TRAIL ENGINE (Real Pixel Touch)
+  // =========================================================================
+  let activePointerId = null;
+  let trailPts = [];
+  let unitTrail = [];
+  let startKey = null;
+  let lastKey = null;
+  let totalDragPx = 0;
+  let isGlide = false;
+  let longPressTriggered = false;
+  let longPressTimer = null;
+  let fadeAnim = null;
+
+  function drawTrail(alpha = 1) {
+    const w = trailCanvas.clientWidth, h = trailCanvas.clientHeight;
+    trailCtx.clearRect(0, 0, w, h);
+    if (trailPts.length < 2) return;
+
+    trailCtx.lineCap = 'round';
+    trailCtx.lineJoin = 'round';
+
+    // Outer soft glow
+    trailCtx.beginPath();
+    trailCtx.moveTo(trailPts[0].x, trailPts[0].y);
+    for (let i = 1; i < trailPts.length; i++) {
+      trailCtx.lineTo(trailPts[i].x, trailPts[i].y);
+    }
+    trailCtx.strokeStyle = `rgba(56, 189, 248, ${(0.28 * alpha).toFixed(2)})`;
+    trailCtx.lineWidth = 14;
+    trailCtx.stroke();
+
+    // Bright tapered inner ribbon
+    for (let i = 1; i < trailPts.length; i++) {
+      const frac = i / trailPts.length;
+      trailCtx.beginPath();
+      trailCtx.moveTo(trailPts[i-1].x, trailPts[i-1].y);
+      trailCtx.lineTo(trailPts[i].x, trailPts[i].y);
+      trailCtx.strokeStyle = `rgba(125, 211, 252, ${((0.3 + 0.7 * frac) * alpha).toFixed(2)})`;
+      trailCtx.lineWidth = 2.5 + 5.5 * frac;
+      trailCtx.stroke();
+    }
+  }
+
+  function fadeOutTrail() {
+    let alpha = 1.0;
+    cancelAnimationFrame(fadeAnim);
+    function step() {
+      alpha -= 0.14;
+      if (alpha <= 0) {
+        trailCtx.clearRect(0, 0, trailCanvas.clientWidth, trailCanvas.clientHeight);
+        return;
+      }
+      drawTrail(alpha);
+      fadeAnim = requestAnimationFrame(step);
+    }
+    fadeAnim = requestAnimationFrame(step);
+  }
+
+  function showPopup(hex, isAlt) {
+    keyPopup.style.left = `${hex.px}px`;
+    keyPopup.style.top = `${Math.max(12, hex.py - hexH * 0.55)}px`;
+    const mainLbl = shouldAutoCap() ? hex.k.toUpperCase() : hex.k;
+    keyPopup.innerHTML = isAlt
+      ? `${escapeHtml(hex.alt)}<small>symbol</small>`
+      : `${mainLbl}<small>hold → ${escapeHtml(hex.alt)}</small>`;
+    keyPopup.classList.toggle('alt', isAlt);
+    keyPopup.classList.add('show');
+  }
+
+  function hidePopup() {
+    keyPopup.classList.remove('show');
+  }
+
+  hexStage.addEventListener('pointerdown', (e) => {
+    if (activePointerId !== null) return;
+    e.preventDefault();
+    cancelAnimationFrame(fadeAnim);
+    activePointerId = e.pointerId;
+    try { hexStage.setPointerCapture(e.pointerId); } catch (_) {}
+
+    const rect = hexStage.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const hex = nearestHex(x, y);
+
+    startKey = hex;
+    lastKey = hex;
+    totalDragPx = 0;
+    isGlide = false;
+    longPressTriggered = false;
+    trailPts = [{ x, y }];
+    unitTrail = [pixelToUnit(x, y)];
+
+    highlightHex(hex.k);
+    showPopup(hex, false);
+    buzz(7);
+
+    clearTimeout(longPressTimer);
+    longPressTimer = setTimeout(() => {
+      if (!isGlide && activePointerId !== null && startKey) {
+        longPressTriggered = true;
+        showPopup(startKey, true);
+        buzz(15);
+      }
+    }, cfg.holdMs);
+  });
+
+  hexStage.addEventListener('pointermove', (e) => {
+    if (e.pointerId !== activePointerId) return;
+    e.preventDefault();
+
+    const rect = hexStage.getBoundingClientRect();
+    const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+    const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+    const prev = trailPts[trailPts.length - 1];
+    const step = Math.hypot(x - prev.x, y - prev.y);
+    if (step < 2.5) return;
+
+    totalDragPx += step;
+    trailPts.push({ x, y });
+    unitTrail.push(pixelToUnit(x, y));
+
+    const hex = nearestHex(x, y);
+    if (!isGlide && (totalDragPx > hexW * 0.42 || hex.k !== startKey.k)) {
+      isGlide = true;
+      longPressTriggered = false;
+      clearTimeout(longPressTimer);
+      hidePopup();
+    }
+
+    if (isGlide) {
+      if (hex.k !== lastKey.k) {
+        lastKey = hex;
+        highlightHex(hex.k);
+        buzz(4);
+      }
+      drawTrail(1);
+    }
+  });
+
+  function finishHexPointer(e) {
+    if (e.pointerId !== activePointerId) return;
+    e.preventDefault();
+    clearTimeout(longPressTimer);
+    activePointerId = null;
+    hidePopup();
+    highlightHex(null);
+
+    if (isGlide && unitTrail.length >= 2) {
+      fadeOutTrail();
+      const preds = decodeGlide(unitTrail);
+      if (preds.length > 0) {
+        const top = preds[0];
+        insertText(formatWord(top), true, top);
+        renderSuggestions(preds, 'glide');
+        updateDistanceStats(top);
+        buzz(10);
+      }
+    } else if (startKey) {
+      trailCtx.clearRect(0, 0, trailCanvas.clientWidth, trailCanvas.clientHeight);
+      if (longPressTriggered) {
+        insertText(startKey.alt, false);
+        renderSuggestions([]);
+        showToast(`Inserted ${startKey.alt}`);
+      } else {
+        const ch = shouldAutoCap() ? startKey.k.toUpperCase() : startKey.k;
+        insertText(ch, false);
+        const pref = getCurrentTapPrefix();
+        renderSuggestions(pref ? prefixSuggestions(pref.word) : [], 'prefix');
+      }
+    }
+  }
+
+  hexStage.addEventListener('pointerup', finishHexPointer);
+  hexStage.addEventListener('pointercancel', finishHexPointer);
+
+  // =========================================================================
+  // 8. UNIFIED SINGLE-SCREEN 123# NUMBERS & SYMBOLS
+  // =========================================================================
+  const NUM_KEYS = ['7','8','9','4','5','6','1','2','3','0','.','='];
+
+  function buildSymbolsView() {
+    const symGroups = $('symGroups');
+    const compactRows = [
+      { cls: 'grp-punct', keys: ['.', ',', '?', '!', "'", '"'] },
+      { cls: 'grp-brack', keys: ['(', ')', '[', ']', '{', '}'] },
+      { cls: 'grp-math',  keys: ['$', '%', '+', '-', '*', '_'] },
+      { cls: 'grp-web',   keys: ['@', '#', '&', '/', ':', ';'] }
+    ];
+    symGroups.innerHTML = compactRows.map(row => `
+      <div class="sym-row" style="grid-template-columns: repeat(6, 1fr);">
+        ${row.keys.map(k => `<button class="sym-key ${row.cls}" data-char="${escapeHtml(k)}">${escapeHtml(k)}</button>`).join('')}
+      </div>
+    `).join('');
+
+    const numpadZone = $('numpadZone');
+    numpadZone.innerHTML = NUM_KEYS.map(k =>
+      `<button class="num-key ${k === '0' ? 'zero' : ''}" data-char="${k}">${k}</button>`
+    ).join('');
+
+    symStage.querySelectorAll('[data-char]').forEach(btn => {
+      btn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        const ch = btn.dataset.char;
+        // If punctuation right after auto-space, pull it snug to the word (just like Gboard!)
+        if (/^[.,?!:;)]$/.test(ch) && state.cursor > 0 && state.text[state.cursor - 1] === ' ') {
+          pushUndo();
+          state.text = state.text.slice(0, state.cursor - 1) + ch + ' ' + state.text.slice(state.cursor);
+          state.cursor += 1;
+          state.lastCommittedWord = null;
+          renderEditor();
+        } else {
+          insertText(ch, false);
+        }
+        buzz(8);
+        if (cfg.autoReturnSym && !/^[0-9.]$/.test(ch)) {
+          setView('hex');
+        }
+      });
+    });
+  }
+
+  function setView(v) {
+    state.view = v;
+    const isSym = v === 'sym';
+    hexStage.style.display = isSym ? 'none' : 'block';
+    symStage.classList.toggle('active', isSym);
+    $('btnMode').textContent = isSym ? 'ABC' : '123#';
+    if (!isSym) requestAnimationFrame(layoutHexes);
+  }
+
+  // =========================================================================
+  // 9. MULTI-GESTURE DELETE (⌫) & SPACE CURSOR TRACKPAD
+  // =========================================================================
+  function deleteOneChar() {
+    if (state.cursor === 0) return;
+    pushUndo();
+    state.text = state.text.slice(0, state.cursor - 1) + state.text.slice(state.cursor);
+    state.cursor--;
+    state.lastCommittedWord = null;
+    renderEditor();
+    const pref = getCurrentTapPrefix();
+    renderSuggestions(pref ? prefixSuggestions(pref.word) : [], 'prefix');
+  }
+
+  function forwardDeleteOneChar() {
+    if (state.cursor >= state.text.length) return;
+    pushUndo();
+    state.text = state.text.slice(0, state.cursor) + state.text.slice(state.cursor + 1);
+    state.lastCommittedWord = null;
+    renderEditor();
+    buzz(12);
+    showToast('Forward deleted ⌦');
+  }
+
+  function deleteWholeWord() {
+    if (state.cursor === 0) return;
+    pushUndo();
+    const before = state.text.slice(0, state.cursor);
+    const trimmed = before.replace(/\s+$/, '');
+    const cut = trimmed.replace(/\S+$/, '');
+    state.text = cut + state.text.slice(state.cursor);
+    state.cursor = cut.length;
+    state.lastCommittedWord = null;
+    renderEditor();
+    renderSuggestions([]);
+    buzz(18);
+    showToast('Deleted word');
+  }
+
+  // Multi-gesture ⌫ handler
+  const btnDelete = $('btnDelete');
+  let delPtr = null, delStartX = 0, delSwiped = false, delRepeated = false, delHoldTimer = null, delRepeatTimer = null;
+
+  btnDelete.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    delPtr = e.pointerId;
+    delStartX = e.clientX;
+    delSwiped = false;
+    delRepeated = false;
+    try { btnDelete.setPointerCapture(e.pointerId); } catch (_) {}
+
+    delHoldTimer = setTimeout(() => {
+      if (!delSwiped && delPtr !== null) {
+        delRepeated = true;
+        deleteOneChar();
+        buzz(6);
+        delRepeatTimer = setInterval(() => { deleteOneChar(); buzz(4); }, 85);
+      }
+    }, 360);
+  });
+
+  btnDelete.addEventListener('pointermove', (e) => {
+    if (e.pointerId !== delPtr) return;
+    const dx = e.clientX - delStartX;
+    if (Math.abs(dx) > 12) {
+      clearTimeout(delHoldTimer);
+      clearInterval(delRepeatTimer);
+    }
+    btnDelete.classList.toggle('swiping-left', dx < -24);
+    btnDelete.classList.toggle('swiping-right', dx > 24);
+    if (!delSwiped && dx < -30) {
+      delSwiped = 'left';
+      deleteWholeWord();
+    } else if (!delSwiped && dx > 30) {
+      delSwiped = 'right';
+      forwardDeleteOneChar();
+    }
+  });
+
+  function endDelete(e) {
+    if (e.pointerId !== delPtr) return;
+    clearTimeout(delHoldTimer);
+    clearInterval(delRepeatTimer);
+    btnDelete.classList.remove('swiping-left', 'swiping-right');
+    if (!delSwiped && !delRepeated) {
+      deleteOneChar();
+      buzz(8);
+    }
+    delPtr = null;
+  }
+  btnDelete.addEventListener('pointerup', endDelete);
+  btnDelete.addEventListener('pointercancel', endDelete);
+
+  // Space / Slide-Cursor Trackpad handler
+  const btnSpace = $('btnSpace');
+  const spaceLabel = $('spaceLabel');
+  let spPtr = null, spStartX = 0, spLastStepX = 0, spSliding = false, lastSpaceTap = 0;
+
+  btnSpace.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    spPtr = e.pointerId;
+    spStartX = e.clientX;
+    spLastStepX = e.clientX;
+    spSliding = false;
+    try { btnSpace.setPointerCapture(e.pointerId); } catch (_) {}
+  });
+
+  btnSpace.addEventListener('pointermove', (e) => {
+    if (e.pointerId !== spPtr) return;
+    if (!spSliding && Math.abs(e.clientX - spStartX) > 14) {
+      spSliding = true;
+      btnSpace.classList.add('sliding');
+      spaceLabel.textContent = '◄ Sliding Cursor ►';
+    }
+    if (spSliding) {
+      const diff = e.clientX - spLastStepX;
+      const stepPx = 15;
+      if (Math.abs(diff) >= stepPx) {
+        const steps = Math.trunc(diff / stepPx);
+        const nextCur = Math.max(0, Math.min(state.text.length, state.cursor + steps));
+        if (nextCur !== state.cursor) {
+          state.cursor = nextCur;
+          state.lastCommittedWord = null;
+          renderEditor();
+          buzz(4);
+        }
+        spLastStepX += steps * stepPx;
+      }
+    }
+  });
+
+  function endSpace(e) {
+    if (e.pointerId !== spPtr) return;
+    btnSpace.classList.remove('sliding');
+    spaceLabel.textContent = 'Space  ◄ slide cursor ►';
+    if (!spSliding) {
+      const now = Date.now();
+      if (now - lastSpaceTap < 300 && state.cursor >= 2 && state.text[state.cursor - 1] === ' ' && /[a-zA-Z0-9]/.test(state.text[state.cursor - 2])) {
+        pushUndo();
+        state.text = state.text.slice(0, state.cursor - 1) + '. ' + state.text.slice(state.cursor);
+        state.cursor += 1;
+        state.lastCommittedWord = null;
+        renderEditor();
+        buzz(10);
+      } else {
+        insertText(' ', false);
+        renderSuggestions([]);
+        buzz(7);
+      }
+      lastSpaceTap = now;
+    }
+    spPtr = null;
+  }
+  btnSpace.addEventListener('pointerup', endSpace);
+  btnSpace.addEventListener('pointercancel', endSpace);
+
+  // =========================================================================
+  // 10. CONTROLS, HAND-FLIPPING & LIVE TUNING
+  // =========================================================================
+  function applyCfg() {
+    document.documentElement.style.setProperty('--bottom-lift', `${cfg.bottomLift}px`);
+    document.documentElement.style.setProperty('--kbd-width', `${cfg.oneHandWidth}%`);
+    document.documentElement.style.setProperty('--hex-height-scale', (cfg.heightScale / 100).toFixed(2));
+
+    kbdShell.classList.remove('hand-right', 'hand-left', 'hand-full');
+    kbdShell.classList.add(`hand-${cfg.hand}`);
+
+    $('handSeg').querySelectorAll('.seg-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.hand === cfg.hand);
+    });
+    $('rngHeight').value = cfg.heightScale;
+    $('valHeight').textContent = `${cfg.heightScale}%`;
+    $('rngWidth').value = cfg.oneHandWidth;
+    $('valWidth').textContent = `${cfg.oneHandWidth}%`;
+    $('rngLift').value = cfg.bottomLift;
+    $('valLift').textContent = `${cfg.bottomLift}px`;
+    $('rngHold').value = cfg.holdMs;
+    $('valHold').textContent = `${cfg.holdMs}ms`;
+    $('btnHeartGlow').textContent = `Heart: ${cfg.heartGlow ? 'ON' : 'OFF'}`;
+    $('btnHeartGlow').classList.toggle('active', cfg.heartGlow);
+    $('btnHaptics').textContent = `Vibe: ${cfg.haptics ? 'ON' : 'OFF'}`;
+    $('btnHaptics').classList.toggle('active', cfg.haptics);
+    $('btnAutoReturn').textContent = `Snap to ABC: ${cfg.autoReturnSym ? 'ON' : 'OFF'}`;
+    $('btnAutoReturn').classList.toggle('active', cfg.autoReturnSym);
+    $('promptBar').classList.toggle('hidden', !cfg.showPrompts);
+    $('btnPrompts').classList.toggle('active', cfg.showPrompts);
+
+    saveCfg();
+    requestAnimationFrame(layoutHexes);
+  }
+
+  $('btnMode').addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    buzz(8);
+    setView(state.view === 'hex' ? 'sym' : 'hex');
+  });
+
+  $('btnEnter').addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    insertText('\n', false);
+    renderSuggestions([]);
+    buzz(10);
+  });
+
+  function toggleShift(e) {
+    e.preventDefault();
+    state.shiftMode = shouldAutoCap() ? 'off' : 'once';
+    buzz(7);
+    syncShiftButtons();
+  }
+  $('btnShiftGutter').addEventListener('pointerdown', toggleShift);
+  $('btnShiftFull').addEventListener('pointerdown', toggleShift);
+
+  $('btnFlipHand').addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    cfg.hand = cfg.hand === 'right' ? 'left' : 'right';
+    buzz(10);
+    applyCfg();
+    showToast(cfg.hand === 'left' ? 'Left-Thumb Dock' : 'Right-Thumb Dock');
+  });
+
+  $('btnUndo').addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    if (state.undoStack.length === 0) return;
+    const prev = state.undoStack.pop();
+    state.text = prev.text;
+    state.cursor = prev.cursor;
+    state.lastCommittedWord = null;
+    buzz(9);
+    renderEditor();
+    showToast('Undid last action');
+  });
+
+  $('btnCopyText').addEventListener('pointerdown', async (e) => {
+    e.preventDefault();
+    if (!state.text) return;
+    try { await navigator.clipboard.writeText(state.text); showToast('Copied text!'); }
+    catch (_) { showToast('Ready to copy'); }
+    buzz(10);
+  });
+
+  $('btnClear').addEventListener('click', () => {
+    if (!state.text) return;
+    pushUndo();
+    state.text = '';
+    state.cursor = 0;
+    state.lastCommittedWord = null;
+    renderEditor();
+    renderSuggestions([]);
+    buzz(10);
+  });
+
+  $('btnPrompts').addEventListener('click', () => {
+    cfg.showPrompts = !cfg.showPrompts;
+    applyCfg();
+  });
+
+  $('btnNextPrompt').addEventListener('click', () => {
+    state.promptIdx = (state.promptIdx + 1) % PRACTICE_PROMPTS.length;
+    $('promptText').textContent = PRACTICE_PROMPTS[state.promptIdx];
+    buzz(6);
+  });
+
+  $('btnTune').addEventListener('click', () => {
+    $('tuneDrawer').classList.toggle('open');
+    $('btnTune').classList.toggle('active', $('tuneDrawer').classList.contains('open'));
+  });
+  $('btnCloseTune').addEventListener('click', () => {
+    $('tuneDrawer').classList.remove('open');
+    $('btnTune').classList.remove('active');
+  });
+
+  $('handSeg').querySelectorAll('.seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => { cfg.hand = btn.dataset.hand; applyCfg(); });
+  });
+  $('rngHeight').addEventListener('input', e => { cfg.heightScale = +e.target.value; applyCfg(); });
+  $('rngWidth').addEventListener('input', e => { cfg.oneHandWidth = +e.target.value; applyCfg(); });
+  $('rngLift').addEventListener('input', e => { cfg.bottomLift = +e.target.value; applyCfg(); });
+  $('rngHold').addEventListener('input', e => { cfg.holdMs = +e.target.value; applyCfg(); });
+
+  $('btnHeartGlow').addEventListener('click', () => { cfg.heartGlow = !cfg.heartGlow; applyCfg(); });
+  $('btnHaptics').addEventListener('click', () => { cfg.haptics = !cfg.haptics; applyCfg(); buzz(12); });
+  $('btnAutoReturn').addEventListener('click', () => { cfg.autoReturnSym = !cfg.autoReturnSym; applyCfg(); });
+
+  $('btnResetTune').addEventListener('click', () => {
+    cfg = { ...DEFAULT_CFG };
+    applyCfg();
+    showToast('Defaults restored');
+  });
+
+  $('btnCopyTune').addEventListener('click', async () => {
+    const avg = state.totalQwertyDist > 0
+      ? `${Math.round((1 - state.totalGlideDist / state.totalQwertyDist) * 100)}%`
+      : 'n/a';
+    const report = `GlideHive Pixel Tuning — Hand: ${cfg.hand}, Hex Height: ${cfg.heightScale}%, One-Hand Width: ${cfg.oneHandWidth}%, Bottom Lift: ${cfg.bottomLift}px, Hold-for-Symbol: ${cfg.holdMs}ms, Heart Glow: ${cfg.heartGlow ? 'ON' : 'OFF'}, Haptics: ${cfg.haptics ? 'ON' : 'OFF'} (Words glided: ${state.totalWordsGlided}, Avg distance saved vs QWERTY: ${avg})`;
+    try {
+      await navigator.clipboard.writeText(report);
+      showToast('Tuning notes copied!');
+    } catch (_) {
+      alert(report);
+    }
+    buzz(12);
+  });
+
+  window.addEventListener('resize', () => requestAnimationFrame(layoutHexes));
+
+  // Boot
+  buildSymbolsView();
+  applyCfg();
+  renderEditor();
+  setTimeout(layoutHexes, 80);
+})();
+</script>
+</body>
+</html>
